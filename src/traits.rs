@@ -78,6 +78,13 @@ pub trait Context {
     ) {
     }
 
+    fn on_foreign_function(
+        &mut self,
+        _function_id: u32,
+        _arguments_size: usize,
+    ) {
+    }
+
     fn get_http_call_response_headers(&self) -> Vec<(String, String)> {
         hostcalls::get_map(MapType::HttpCallResponseHeaders).unwrap()
     }

@@ -427,6 +427,27 @@ impl Dispatcher {
         }
     }
 
+    fn on_foreign_function(
+        &self,
+        context_id: u32,
+        function_id: u32,
+        arugments_size: usize,
+    ) {
+        if let Some(http_stream) = self.http_streams.borrow_mut().get_mut(&context_id) {
+            self.active_id.set(context_id);
+            hostcalls::set_effective_context(context_id).unwrap();
+            http_stream.on_foreign_function(function_id, arugments_size)
+        } else if let Some(stream) = self.streams.borrow_mut().get_mut(&context_id) {
+            self.active_id.set(context_id);
+            hostcalls::set_effective_context(context_id).unwrap();
+            stream.on_foreign_function(function_id, arugments_size)
+        } else if let Some(root) = self.roots.borrow_mut().get_mut(&context_id) {
+            self.active_id.set(context_id);
+            hostcalls::set_effective_context(context_id).unwrap();
+            root.on_foreign_function(function_id, arugments_size)
+        }
+    }
+
     fn on_grpc_receive_initial_metadata(&self, token_id: u32, headers: u32) {
         let context_id = match self.grpc_streams.borrow_mut().get(&token_id) {
             Some(id) => *id,
@@ -692,6 +713,17 @@ pub extern "C" fn proxy_on_http_call_response(
 ) {
     DISPATCHER.with(|dispatcher| {
         dispatcher.on_http_call_response(token_id, num_headers, body_size, num_trailers)
+    })
+}
+
+#[no_mangle]
+pub extern "C" fn proxy_on_foreign_function(
+    context_id: u32,
+    function_id: u32,
+    arguments_size: usize,
+) {
+    DISPATCHER.with(|dispatcher| {
+        dispatcher.on_foreign_function(context_id, function_id, arguments_size)
     })
 }
 
